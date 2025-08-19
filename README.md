@@ -103,7 +103,7 @@ To build this project on a different machine:
 
 3. **Alternative direct build:**
    ```bash
-   pyinstaller --onefile --windowed --name=TranslationSurvey --add-data=merged_translation_data.csv;. survey_app.py
+   pyinstaller --onefile --windowed --name=TranslationSurvey --add-data="merged_translation_data.csv:." survey_app.py
    ```
 
 ### Required Files for Building
