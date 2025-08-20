@@ -12,10 +12,13 @@ class TranslationSurveyApp:
         self.root.title("Translation Quality Survey")
         self.root.geometry("1200x800")
         
-        # Load data and randomize question order
+        # Load data
         self.data = pd.read_csv('merged_translation_data.csv')
-        self.question_indices = list(range(len(self.data)))
-        random.shuffle(self.question_indices)
+        self.all_data = self.data.copy()  # Keep original data
+        self.current_language_filter = "Both"  # Default filter
+        
+        # Apply initial filter and randomize question order
+        self.apply_language_filter()
         self.current_position = 0
         
         # Translation columns (excluding source and corpus_type)
@@ -29,6 +32,9 @@ class TranslationSurveyApp:
         
         self.setup_ui()
         self.load_next_question()
+        
+        # Bind window resize event
+        self.root.bind('<Configure>', self.on_window_resize)
     
     def setup_ui(self):
         # Main frame
@@ -38,25 +44,40 @@ class TranslationSurveyApp:
         # Configure grid weights
         self.root.columnconfigure(0, weight=1)
         self.root.rowconfigure(0, weight=1)
+        main_frame.columnconfigure(0, weight=1)
         main_frame.columnconfigure(1, weight=1)
         
-        # Progress label
-        self.progress_label = ttk.Label(main_frame, text="", font=("Arial", 12))
-        self.progress_label.grid(row=0, column=0, columnspan=2, pady=(0, 10), sticky=tk.W)
+        # Source text header with language filter
+        header_frame = ttk.Frame(main_frame)
+        header_frame.grid(row=0, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 3))
+        header_frame.columnconfigure(0, weight=1)
         
-        # Source text
-        ttk.Label(main_frame, text="Source Text:", font=("Arial", 14, "bold")).grid(row=1, column=0, columnspan=2, sticky=tk.W, pady=(0, 5))
+        ttk.Label(header_frame, text="Source Text:", font=("Arial", 14, "bold")).grid(row=0, column=0, sticky=tk.W)
         
-        self.source_text = tk.Text(main_frame, height=4, width=100, wrap=tk.WORD, font=("Arial", 11))
-        self.source_text.grid(row=2, column=0, columnspan=2, pady=(0, 20), sticky=(tk.W, tk.E))
+        filter_frame = ttk.Frame(header_frame)
+        filter_frame.grid(row=0, column=1, sticky=tk.E)
+        
+        ttk.Label(filter_frame, text="Source Language:", font=("Arial", 12)).grid(row=0, column=0, padx=(0, 5))
+        
+        self.language_var = tk.StringVar(value="Both")
+        self.language_combo = ttk.Combobox(filter_frame, textvariable=self.language_var, 
+                                          values=["Both", "English", "French"], 
+                                          state="readonly", width=10)
+        self.language_combo.grid(row=0, column=1)
+        self.language_combo.bind('<<ComboboxSelected>>', self.on_language_filter_change)
+        
+        self.source_label = ttk.Label(main_frame, text="", font=("Arial", 11), wraplength=1000, justify=tk.LEFT)
+        self.source_label.grid(row=1, column=0, columnspan=2, pady=(0, 5), sticky=(tk.W, tk.E))
+        
+        # Separator line under source text
+        source_separator = ttk.Separator(main_frame, orient='horizontal')
+        source_separator.grid(row=2, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 10))
         
         # Translations frame
         translations_frame = ttk.Frame(main_frame)
         translations_frame.grid(row=3, column=0, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S))
         translations_frame.columnconfigure(0, weight=1)
         main_frame.rowconfigure(3, weight=1)
-        
-        ttk.Label(translations_frame, text="Translations (in random order):", font=("Arial", 14, "bold")).grid(row=0, column=0, sticky=tk.W, pady=(0, 10))
         
         # Create scrollable frame for translations
         canvas = tk.Canvas(translations_frame, height=400)
@@ -71,9 +92,18 @@ class TranslationSurveyApp:
         canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
         canvas.configure(yscrollcommand=scrollbar.set)
         
-        canvas.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
-        scrollbar.grid(row=1, column=1, sticky=(tk.N, tk.S))
-        translations_frame.rowconfigure(1, weight=1)
+        canvas.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        scrollbar.grid(row=0, column=1, sticky=(tk.N, tk.S))
+        translations_frame.rowconfigure(0, weight=1)
+        translations_frame.columnconfigure(0, weight=1)
+        
+        # Make scrollable frame expand to canvas width
+        def configure_scroll_region(event):
+            canvas.configure(scrollregion=canvas.bbox("all"))
+            canvas.itemconfig(canvas.find_all()[0], width=canvas.winfo_width())
+        
+        self.scrollable_frame.bind("<Configure>", configure_scroll_region)
+        canvas.bind("<Configure>", configure_scroll_region)
         
         # Mouse wheel scrolling
         def _on_mousewheel(event):
@@ -82,23 +112,47 @@ class TranslationSurveyApp:
         
         # Navigation buttons
         nav_frame = ttk.Frame(main_frame)
-        nav_frame.grid(row=4, column=0, columnspan=2, pady=(20, 0))
-        
-        self.prev_button = ttk.Button(nav_frame, text="← Previous", command=self.previous_question)
-        self.prev_button.grid(row=0, column=0, padx=(0, 10))
+        nav_frame.grid(row=4, column=0, columnspan=2, pady=(10, 0))
         
         self.next_button = ttk.Button(nav_frame, text="Next →", command=self.next_question)
-        self.next_button.grid(row=0, column=1, padx=(10, 0))
+        self.next_button.grid(row=0, column=0, padx=(0, 10))
         
-        self.save_button = ttk.Button(nav_frame, text="Save Rankings", command=self.save_results)
-        self.save_button.grid(row=0, column=2, padx=(20, 0))
+        self.save_button = ttk.Button(nav_frame, text="Save and Close", command=self.save_and_close)
+        self.save_button.grid(row=0, column=1, padx=(10, 0))
+    
+    def apply_language_filter(self):
+        """Filter data based on selected language and randomize question order"""
+        if self.current_language_filter == "Both":
+            self.data = self.all_data.copy()
+        elif self.current_language_filter == "English":
+            self.data = self.all_data[self.all_data['source_lang'] == 'en'].copy()
+        else:  # French
+            self.data = self.all_data[self.all_data['source_lang'] == 'fr'].copy()
+        
+        # Reset indices and randomize
+        self.question_indices = list(range(len(self.data)))
+        random.shuffle(self.question_indices)
+    
+    def on_language_filter_change(self, event=None):
+        """Handle language filter change"""
+        new_filter = self.language_var.get()
+        if new_filter != self.current_language_filter:
+            # Save current rankings before switching
+            if hasattr(self, 'ranking_vars'):
+                self.save_current_rankings()
+            
+            self.current_language_filter = new_filter
+            self.apply_language_filter()
+            self.current_position = 0
+            self.load_next_question()
     
     def create_translation_widgets(self):
-        # Clear existing widgets
+        # Clear existing widgets and labels list
         for widget in self.scrollable_frame.winfo_children():
             widget.destroy()
         
         self.ranking_vars = {}
+        self.translation_labels = []  # Reset labels list
         current_row = self.data.iloc[self.current_index]
         
         # Get translations and randomize order
@@ -112,23 +166,42 @@ class TranslationSurveyApp:
         
         # Create widgets for each translation
         for i, (col_name, translation) in enumerate(translations):
-            frame = ttk.LabelFrame(self.scrollable_frame, text=f"Translation {i+1}", padding="10")
-            frame.grid(row=i, column=0, sticky=(tk.W, tk.E), pady=(0, 10), padx=(0, 10))
+            frame = ttk.Frame(self.scrollable_frame, padding="5")
+            frame.grid(row=i, column=0, sticky=(tk.W, tk.E), pady=(0, 8), padx=(0, 10))
             self.scrollable_frame.columnconfigure(0, weight=1)
             
-            # Translation text
-            text_widget = tk.Text(frame, height=3, width=80, wrap=tk.WORD, font=("Arial", 10))
-            text_widget.insert("1.0", translation)
-            text_widget.config(state=tk.DISABLED)
-            text_widget.grid(row=0, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 10))
+            # Header with translation number and rank dropdown on same line
+            header_frame = ttk.Frame(frame)
+            header_frame.grid(row=0, column=0, sticky=(tk.W, tk.E), pady=(0, 5))
+            header_frame.columnconfigure(0, weight=1)
             
-            # Ranking dropdown
-            ttk.Label(frame, text="Rank:").grid(row=1, column=0, sticky=tk.W, padx=(0, 10))
+            ttk.Label(header_frame, text=f"Translation {i+1}", font=("Arial", 11, "bold")).grid(row=0, column=0, sticky=tk.W)
+            
+            rank_frame = ttk.Frame(header_frame)
+            rank_frame.grid(row=0, column=1, sticky=tk.E)
+            
+            ttk.Label(rank_frame, text="Rank:").grid(row=0, column=0, padx=(0, 5))
             
             var = tk.StringVar(value='')  # Explicitly set to empty
-            combo = ttk.Combobox(frame, textvariable=var, values=self.ranking_options, state="readonly", width=10)
+            combo = ttk.Combobox(rank_frame, textvariable=var, values=self.ranking_options, state="readonly", width=10)
             combo.set('')  # Ensure it starts blank
-            combo.grid(row=1, column=1, sticky=tk.W)
+            combo.grid(row=0, column=1)
+            
+            # Disable mousewheel on combobox to prevent accidental changes
+            def disable_mousewheel(event):
+                return "break"
+            combo.bind("<MouseWheel>", disable_mousewheel)
+            
+            # Translation text as label
+            translation_label = ttk.Label(frame, text=translation, font=("Arial", 10), wraplength=1000, justify=tk.LEFT)
+            translation_label.grid(row=1, column=0, sticky=(tk.W, tk.E), pady=(0, 3))
+            
+            # Store translation labels for resize handling
+            self.translation_labels.append(translation_label)
+            
+            # Add separator line
+            separator = ttk.Separator(frame, orient='horizontal')
+            separator.grid(row=2, column=0, sticky=(tk.W, tk.E), pady=(3, 0))
             
             # Store the variable with the original column name for tracking
             self.ranking_vars[col_name] = var
@@ -146,17 +219,13 @@ class TranslationSurveyApp:
             messagebox.showinfo("Survey Complete", "You have completed all questions!")
     
     def update_progress(self):
-        self.progress_label.config(text=f"Question {self.current_position + 1} of {len(self.question_indices)} (ID: {self.current_index})")
+        pass  # ID removed
     
     def update_source_text(self):
         current_row = self.data.iloc[self.current_index]
-        self.source_text.config(state=tk.NORMAL)
-        self.source_text.delete("1.0", tk.END)
-        self.source_text.insert("1.0", str(current_row['source']))
-        self.source_text.config(state=tk.DISABLED)
+        self.source_label.config(text=str(current_row['source']))
     
     def update_navigation_buttons(self):
-        self.prev_button.config(state=tk.NORMAL if self.current_position > 0 else tk.DISABLED)
         self.next_button.config(state=tk.NORMAL if self.current_position < len(self.question_indices) - 1 else tk.DISABLED)
     
     def save_current_rankings(self):
@@ -211,35 +280,32 @@ class TranslationSurveyApp:
             self.current_position += 1
             self.load_next_question()
     
-    def previous_question(self):
-        # Save current rankings before moving
-        self.save_current_rankings()
+    def save_and_close(self):
+        """Save current rankings and close the application"""
+        # Save rankings if any exist
+        if hasattr(self, 'ranking_vars'):
+            self.save_current_rankings()
         
-        if self.current_position > 0:
-            self.current_position -= 1
-            self.load_next_question()
+        self.root.quit()
     
-    def save_results(self):
-        """Manual save button - saves current rankings and shows confirmation"""
-        if not hasattr(self, 'ranking_vars'):
-            messagebox.showwarning("No Data", "No rankings to save!")
+    def on_window_resize(self, event):
+        """Handle window resize event to update text wrapping"""
+        # Only handle resize events for the root window
+        if event.widget != self.root:
             return
+            
+        # Get current window width and calculate wrap length
+        window_width = self.root.winfo_width()
+        # Subtract padding and scrollbar space, convert pixels to characters
+        wrap_length = max(200, window_width - 100)  # Minimum 200, subtract padding
         
-        # Get current rankings
-        current_rankings = {}
-        for col_name, var in self.ranking_vars.items():
-            ranking = var.get()
-            current_rankings[col_name] = ranking if ranking else ''
+        # Update source label wraplength
+        self.source_label.config(wraplength=wrap_length)
         
-        # Check if any rankings were made
-        if not any(ranking for ranking in current_rankings.values()):
-            messagebox.showwarning("No Rankings", "Please rank at least one translation before saving!")
-            return
-        
-        # Save the rankings
-        self.save_current_rankings()
-        
-        messagebox.showinfo("Saved", f"Rankings saved to translation_quality_results.csv!\n\nYou can now navigate to another question or re-rank this one.")
+        # Update translation labels wraplength
+        if hasattr(self, 'translation_labels'):
+            for label in self.translation_labels:
+                label.config(wraplength=wrap_length)
     
     def run(self):
         self.root.mainloop()

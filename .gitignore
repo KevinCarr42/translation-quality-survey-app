@@ -60,3 +60,6 @@ translation_quality_results.csv
 
 # Claude
 .claude/
+
+# output file
+translation_quality_results.csv

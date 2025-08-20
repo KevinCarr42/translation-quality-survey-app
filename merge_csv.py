@@ -83,7 +83,7 @@ def merge_csv_files(file1_path, file2_path, output_path):
     translator_columns = sorted(list(all_translators))
 
     # Define column order
-    columns = ['source', 'translation_bureau'] + translator_columns + ['corpus_type']
+    columns = ['source', 'source_lang', 'translation_bureau'] + translator_columns + ['corpus_type']
 
     # Write merged CSV
     print(f"Writing merged data to {output_path}...")
