@@ -160,7 +160,7 @@ class TranslationSurveyApp:
         self.language_combo.grid(row=0, column=1)
         self.language_combo.bind('<<ComboboxSelected>>', self.on_language_filter_change)
         
-        self.source_label = ttk.Label(main_frame, text="", font=("Arial", 11, "bold"), wraplength=1000, justify=tk.LEFT)
+        self.source_label = ttk.Label(main_frame, text="", font=("Arial", 11, "bold"), wraplength=self.get_current_wrap_length(), justify=tk.LEFT)
         self.source_label.grid(row=1, column=0, columnspan=2, pady=(0, 5), sticky=(tk.W, tk.E))
         
         # Separator line under source text
@@ -267,7 +267,7 @@ class TranslationSurveyApp:
         self.comp_language_combo.bind('<<ComboboxSelected>>', self.on_comp_language_filter_change)
         
         # Source text
-        self.comp_source_label = ttk.Label(comp_main_frame, text="", font=("Arial", 11, "bold"), wraplength=1000, justify=tk.LEFT)
+        self.comp_source_label = ttk.Label(comp_main_frame, text="", font=("Arial", 11, "bold"), wraplength=self.get_current_wrap_length(), justify=tk.LEFT)
         self.comp_source_label.grid(row=1, column=0, pady=(0, 5), sticky=(tk.W, tk.E))
         
         # Separator line
@@ -385,7 +385,7 @@ class TranslationSurveyApp:
             combo.bind("<MouseWheel>", disable_mousewheel)
             
             # Translation text as label
-            translation_label = ttk.Label(frame, text=translation, font=("Arial", 10), wraplength=1000, justify=tk.LEFT)
+            translation_label = ttk.Label(frame, text=translation, font=("Arial", 10), wraplength=self.get_current_wrap_length(), justify=tk.LEFT)
             translation_label.grid(row=1, column=0, sticky=(tk.W, tk.E), pady=(0, 3))
             
             # Store translation labels for resize handling
@@ -407,8 +407,9 @@ class TranslationSurveyApp:
             self.update_source_text()
             self.create_translation_widgets()
             self.update_navigation_buttons()
-            # Reapply zoom level to new widgets
+            # Reapply zoom level and wrap length to new widgets
             self.update_font_sizes()
+            self.update_wrap_lengths()
         else:
             messagebox.showinfo("Survey Complete", "You have completed all questions!")
     
@@ -491,8 +492,9 @@ class TranslationSurveyApp:
             self.update_comp_source_text()
             self.create_comparison_widgets()
             self.update_comp_navigation_buttons()
-            # Reapply zoom level to new widgets
+            # Reapply zoom level and wrap length to new widgets
             self.update_font_sizes()
+            self.update_wrap_lengths()
         else:
             messagebox.showinfo("Survey Complete", "You have completed all comparison questions!")
     
@@ -531,7 +533,7 @@ class TranslationSurveyApp:
         # Translation A section
         ttk.Label(self.comp_translations_frame, text="Translation A", font=("Arial", 12, "bold")).grid(row=0, column=0, sticky=tk.W, pady=(0, 5))
         
-        translation1_label = ttk.Label(self.comp_translations_frame, text=translation1_text, font=("Arial", 10), wraplength=1000, justify=tk.LEFT)
+        translation1_label = ttk.Label(self.comp_translations_frame, text=translation1_text, font=("Arial", 10), wraplength=self.get_current_wrap_length(), justify=tk.LEFT)
         translation1_label.grid(row=1, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
         
         better1_button = ttk.Button(self.comp_translations_frame, text="This is Better", command=lambda: self.choose_better(1))
@@ -544,7 +546,7 @@ class TranslationSurveyApp:
         # Translation B section
         ttk.Label(self.comp_translations_frame, text="Translation B", font=("Arial", 12, "bold")).grid(row=4, column=0, sticky=tk.W, pady=(0, 5))
         
-        translation2_label = ttk.Label(self.comp_translations_frame, text=translation2_text, font=("Arial", 10), wraplength=1000, justify=tk.LEFT)
+        translation2_label = ttk.Label(self.comp_translations_frame, text=translation2_text, font=("Arial", 10), wraplength=self.get_current_wrap_length(), justify=tk.LEFT)
         translation2_label.grid(row=5, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
         
         better2_button = ttk.Button(self.comp_translations_frame, text="This is Better", command=lambda: self.choose_better(2))
@@ -646,16 +648,15 @@ class TranslationSurveyApp:
         # Note: Static UI elements (headers, filter labels) would need widget references to update
         # For now, they'll keep their original size as they're created once
     
-    def on_window_resize(self, event):
-        """Handle window resize event to update text wrapping"""
-        # Only handle resize events for the root window
-        if event.widget != self.root:
-            return
-            
-        # Get current window width and calculate wrap length
+    def get_current_wrap_length(self):
+        """Calculate current wrap length based on window width"""
         window_width = self.root.winfo_width()
         # Subtract padding and scrollbar space, convert pixels to characters
-        wrap_length = max(200, window_width - 100)  # Minimum 200, subtract padding
+        return max(200, window_width - 100)  # Minimum 200, subtract padding
+    
+    def update_wrap_lengths(self):
+        """Update wrap lengths for all text labels"""
+        wrap_length = self.get_current_wrap_length()
         
         # Update source label wraplength
         self.source_label.config(wraplength=wrap_length)
@@ -668,11 +669,19 @@ class TranslationSurveyApp:
         # Update comparison labels wraplength
         if hasattr(self, 'comp_translation_labels'):
             for label in self.comp_translation_labels:
-                label.config(wraplength=wrap_length)  # Full width since stacked vertically
+                label.config(wraplength=wrap_length)
         
         # Update comparison source label wraplength
         if hasattr(self, 'comp_source_label'):
             self.comp_source_label.config(wraplength=wrap_length)
+    
+    def on_window_resize(self, event):
+        """Handle window resize event to update text wrapping"""
+        # Only handle resize events for the root window
+        if event.widget != self.root:
+            return
+        
+        self.update_wrap_lengths()
     
     def run(self):
         self.root.mainloop()
