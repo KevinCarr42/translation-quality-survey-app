@@ -407,6 +407,8 @@ class TranslationSurveyApp:
             self.update_source_text()
             self.create_translation_widgets()
             self.update_navigation_buttons()
+            # Reapply zoom level to new widgets
+            self.update_font_sizes()
         else:
             messagebox.showinfo("Survey Complete", "You have completed all questions!")
     
@@ -489,6 +491,8 @@ class TranslationSurveyApp:
             self.update_comp_source_text()
             self.create_comparison_widgets()
             self.update_comp_navigation_buttons()
+            # Reapply zoom level to new widgets
+            self.update_font_sizes()
         else:
             messagebox.showinfo("Survey Complete", "You have completed all comparison questions!")
     
