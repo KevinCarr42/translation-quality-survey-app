@@ -21,6 +21,16 @@ class TranslationSurveyApp:
         self.apply_language_filter()
         self.current_position = 0
         
+        # Initialize zoom level
+        self.zoom_level = 1.0
+        self.base_font_sizes = {
+            'header': 14,
+            'source': 11,
+            'translation_header': 11,
+            'translation_text': 10,
+            'filter_label': 12
+        }
+        
         # Translation columns (excluding source and corpus_type)
         self.translation_columns = [
             'translation_bureau', 'm2m100_418m_base', 'm2m100_418m_finetuned',
@@ -105,9 +115,17 @@ class TranslationSurveyApp:
         self.scrollable_frame.bind("<Configure>", configure_scroll_region)
         canvas.bind("<Configure>", configure_scroll_region)
         
-        # Mouse wheel scrolling
+        # Mouse wheel scrolling and zooming
         def _on_mousewheel(event):
-            canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+            if event.state & 0x4:  # Ctrl key is pressed
+                # Zoom functionality
+                if event.delta > 0:
+                    self.zoom_in()
+                else:
+                    self.zoom_out()
+            else:
+                # Normal scrolling
+                canvas.yview_scroll(int(-1*(event.delta/120)), "units")
         canvas.bind_all("<MouseWheel>", _on_mousewheel)
         
         # Navigation buttons
@@ -287,6 +305,36 @@ class TranslationSurveyApp:
             self.save_current_rankings()
         
         self.root.quit()
+    
+    def zoom_in(self):
+        """Increase font size"""
+        self.zoom_level = min(2.0, self.zoom_level + 0.1)  # Max 2x zoom
+        self.update_font_sizes()
+    
+    def zoom_out(self):
+        """Decrease font size"""
+        self.zoom_level = max(0.5, self.zoom_level - 0.1)  # Min 0.5x zoom
+        self.update_font_sizes()
+    
+    def update_font_sizes(self):
+        """Update all font sizes based on current zoom level"""
+        # Update header font
+        header_size = int(self.base_font_sizes['header'] * self.zoom_level)
+        source_size = int(self.base_font_sizes['source'] * self.zoom_level)
+        filter_size = int(self.base_font_sizes['filter_label'] * self.zoom_level)
+        translation_header_size = int(self.base_font_sizes['translation_header'] * self.zoom_level)
+        translation_text_size = int(self.base_font_sizes['translation_text'] * self.zoom_level)
+        
+        # Update source text label
+        self.source_label.config(font=("Arial", source_size))
+        
+        # Update translation labels
+        if hasattr(self, 'translation_labels'):
+            for label in self.translation_labels:
+                label.config(font=("Arial", translation_text_size))
+        
+        # Note: Static UI elements (headers, filter labels) would need widget references to update
+        # For now, they'll keep their original size as they're created once
     
     def on_window_resize(self, event):
         """Handle window resize event to update text wrapping"""
