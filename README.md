@@ -1,4 +1,52 @@
-# Translation Quality Survey App
+# From Data to Translation: Leveraging AI for Efficient and Accurate Translation of Scientific Reports 
+
+# Phase 4: AI Translation Quality Survey App
+
+## Description
+
+This phase developed a precompiled binary executable survey application to conduct blind evaluation of translation quality across different model configurations. The application presents randomised translation samples to evaluators without revealing which model or approach generated each translation, ensuring unbiased assessment of translation quality.
+
+The survey is designed to collect quality ratings and comparative rankings from domain experts, translation professionals, and CSAS staff to complement the analytical evaluation metrics used in other phases. This human evaluation component is useful for validating translation quality improvements and informing final model selection.
+
+## Key Components
+
+### Survey Application Features
+- **Ranking Tab**: Displays all available translations for a given text segment, including published Translation Bureau translations, with users able to rank any or all translations without knowing their source
+- **Comparison Tab**: Presents two randomly selected translations side-by-side for direct comparison, potentially including published translations, with source information hidden
+- Blind evaluation interface ensuring evaluators cannot identify translation sources
+- Randomised presentation preventing bias toward any particular approach
+
+### Evaluation Framework
+- Translation samples from multiple model configurations and published Translation Bureau outputs
+- Two evaluation modes: comprehensive ranking of all available translations and pairwise comparison
+- Complete source anonymisation across both evaluation tabs
+- Randomisation algorithms to prevent bias and ensure fair comparison
+- Data collection and export functionality for statistical analysis in Phase 5
+
+## Survey Design
+
+The application implements a blind evaluation methodology where:
+- Translation samples are presented without model identification
+- Published translations are included as one option for comparison purposes
+- Evaluators may rate quality on standardised scales, or may compare 2 randomly selected translations for a given set of translations
+- Randomisation ensures unbiased sample presentation
+- Results are collected for statistical analysis in Phase 5
+
+## Integration with Other Phases
+
+This survey application directly supports the evaluation framework in Phase 5, providing human assessment data to complement analytical translation quality metrics. The results inform final model selection and validation of the integrated translation system.
+
+## All Phases
+
+- **Phase 1**: [Data Gathering and Transformation](https://github.com/KevinCarr42/CSAS-translation-finetuning-phase1) (complete)
+- **Phase 2**: [AI Translation Fine-Tuning](https://github.com/KevinCarr42/Translation-Fine-Tuning) (complete)
+- **Phase 3**: [Rule-Based Preferential Translations](https://github.com/KevinCarr42/rule-based-translation) (complete)
+- **Phase 4**: AI Translation Quality Survey App (complete)
+- **Phase 5**: [Final AI Translation Model and Translation Quality Evaluation](https://github.com/KevinCarr42/CSAS-Translations) (in-progress)
+- **Phase 6**: Deploy the Final Model (in-progress)
+
+
+# Appendix: Survey App Build and Intallation Instructions
 
 A simple GUI application for ranking translation quality across multiple translation models.
 
