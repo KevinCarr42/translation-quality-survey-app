@@ -45,6 +45,7 @@ dist/
 Thumbs.db
 
 # Project specific
+translation_results/
 translation_quality_results.csv
 *.csv
 !merged_translation_data.csv
