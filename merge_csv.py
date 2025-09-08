@@ -1,22 +1,23 @@
 #!/usr/bin/env python3
 """
-Script to merge two CSV files containing translation comparisons.
+Script to merge CSV files from a folder containing translation comparisons.
 Each CSV has multiple rows per source text (one per translator).
 This script combines them into one row per source text with separate columns for each translator.
 """
 
 import csv
 import sys
+import os
+import re
 from collections import defaultdict, OrderedDict
 
 
-def merge_csv_files(file1_path, file2_path, output_path):
+def merge_csv_folder(folder_path, output_path):
     """
-    Merge two CSV files containing translation data.
+    Merge CSV files from a folder containing translation data.
     
     Args:
-        file1_path: Path to first CSV file (test_data)
-        file2_path: Path to second CSV file (eval_data)
+        folder_path: Path to folder containing CSV files
         output_path: Path for output merged CSV file
     """
     
@@ -61,17 +62,30 @@ def merge_csv_files(file1_path, file2_path, output_path):
         
         return grouped_data
     
-    # Process both files
-    print(f"Processing {file1_path}...")
-    test_data = process_csv_file(file1_path, 'test_data')
+    # Find CSV files in folder matching the pattern
+    csv_files = []
+    pattern = re.compile(r'translation_comparison_(.+?)_2025090.*\.csv')
     
-    print(f"Processing {file2_path}...")
-    eval_data = process_csv_file(file2_path, 'eval_data')
+    for filename in os.listdir(folder_path):
+        match = pattern.match(filename)
+        if match:
+            corpus_type = match.group(1)
+            file_path = os.path.join(folder_path, filename)
+            csv_files.append((file_path, corpus_type))
     
-    # Combine all data
+    if not csv_files:
+        raise ValueError(f"No CSV files matching pattern found in {folder_path}")
+    
+    print(f"Found {len(csv_files)} CSV files:")
+    for file_path, corpus_type in csv_files:
+        print(f"  {os.path.basename(file_path)} -> corpus_type: {corpus_type}")
+    
+    # Process all files
     all_data = []
-    all_data.extend(test_data.values())
-    all_data.extend(eval_data.values())
+    for file_path, corpus_type in csv_files:
+        print(f"Processing {os.path.basename(file_path)}...")
+        file_data = process_csv_file(file_path, corpus_type)
+        all_data.extend(file_data.values())
     
     # Get all unique translator names to create consistent column headers
     all_translators = set()
@@ -99,21 +113,25 @@ def merge_csv_files(file1_path, file2_path, output_path):
             writer.writerow(row)
     
     print(f"Merge complete! Output contains {len(all_data)} rows.")
-    print(f"Test data rows: {len(test_data)}")
-    print(f"Eval data rows: {len(eval_data)}")
+    corpus_counts = {}
+    for data in all_data:
+        corpus_type = data.get('corpus_type', 'unknown')
+        corpus_counts[corpus_type] = corpus_counts.get(corpus_type, 0) + 1
+    
+    for corpus_type, count in corpus_counts.items():
+        print(f"{corpus_type} rows: {count}")
     print(f"Translator columns: {translator_columns}")
 
 
 if __name__ == "__main__":
-    # File paths
-    file1 = "translation_comparison_20250819-0834.csv"  # test_data
-    file2 = "translation_comparison_20250819-0923.csv"  # eval_data
-    output = "merged_translation_data.csv"
+    # Folder and output paths
+    folder_path = "translation_results/"  # Current directory
+    output = "dist/merged_translation_data.csv"
     
     try:
-        merge_csv_files(file1, file2, output)
+        merge_csv_folder(folder_path, output)
     except FileNotFoundError as e:
-        print(f"Error: Could not find file - {e}")
+        print(f"Error: Could not find folder - {e}")
         sys.exit(1)
     except Exception as e:
         print(f"Error: {e}")
