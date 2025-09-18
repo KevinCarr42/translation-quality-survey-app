@@ -64,12 +64,12 @@ def merge_csv_folder(folder_path, output_path):
     
     # Find CSV files in folder matching the pattern
     csv_files = []
-    pattern = re.compile(r'translation_comparison_(.+?)_2025090.*\.csv')
+    pattern = re.compile(r'(.+?)_translation_comparison_(.+?)\.csv')
     
     for filename in os.listdir(folder_path):
         match = pattern.match(filename)
         if match:
-            corpus_type = match.group(1)
+            corpus_type = match.group(2)
             file_path = os.path.join(folder_path, filename)
             csv_files.append((file_path, corpus_type))
     
@@ -124,8 +124,7 @@ def merge_csv_folder(folder_path, output_path):
 
 
 if __name__ == "__main__":
-    # Folder and output paths
-    folder_path = "translation_results/"  # Current directory
+    folder_path = "translation_results/"
     output = "dist/merged_translation_data.csv"
     
     try:
