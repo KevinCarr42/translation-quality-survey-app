@@ -38,12 +38,10 @@ class TranslationSurveyApp:
             'filter_label': 12
         }
         
-        # Translation columns (excluding source and corpus_type)
-        self.translation_columns = [
-            'translation_bureau', 'm2m100_418m_base', 'm2m100_418m_finetuned',
-            'mbart50_mmt_base', 'mbart50_mmt_finetuned', 'nllb_3b_base_researchonly',
-            'opus_mt_base', 'opus_mt_finetuned'
-        ]
+        # Dynamically determine translation columns from CSV headers
+        # Exclude metadata columns to get only translation columns
+        excluded_columns = {'source', 'source_lang', 'corpus_type'}
+        self.translation_columns = [col for col in self.data.columns if col not in excluded_columns]
         
         self.ranking_options = ['', 'good', 'bad', 'best', 'unknown']
         
